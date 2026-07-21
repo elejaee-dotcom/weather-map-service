@@ -7,6 +7,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.interpolate import griddata
+from scipy.ndimage import gaussian_filter
 from fastapi import FastAPI, Query, Response, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -149,6 +150,11 @@ def generate_map(
 
     grid_lon, grid_lat = np.mgrid[LON_MIN:LON_MAX:300j, LAT_MIN:LAT_MAX:300j]
     grid_vals = griddata((lons, lats), vals, (grid_lon, grid_lat), method="cubic")
+    # نرم‌سازی سبک برای حذف حالت پلکانی ناشی از فاصله نقاط نمونه‌برداری
+    nan_mask = np.isnan(grid_vals)
+    filled = np.nan_to_num(grid_vals, nan=0.0)
+    smoothed = gaussian_filter(filled, sigma=3)
+    grid_vals = np.where(nan_mask, np.nan, smoothed)
 
     fig, ax = plt.subplots(figsize=(10, 10), facecolor="black")
     ax.set_facecolor("black")
@@ -164,7 +170,7 @@ def generate_map(
                     for ring in poly:
                         xs = [c[0] for c in ring]
                         ys = [c[1] for c in ring]
-                        ax.plot(xs, ys, color="white", linewidth=1.2)
+                        ax.plot(xs, ys, color="black", linewidth=1.4)
         except Exception:
             pass
 
